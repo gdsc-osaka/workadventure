@@ -9,10 +9,16 @@ import { buildErrorPayload } from "../errors.js";
 
 const router = Router();
 
+// NOTE: application errors are returned with HTTP 200 on purpose. pusher calls this
+// endpoint through axios, which rejects any non-2xx response before it gets a chance to
+// parse the body (AdminApi.fetchMapDetails), so a 4xx is reported to the user as a
+// generic "Connection error / ROOM_ACCESS_ERROR" and the real reason is lost. Only the
+// auth middleware answers 4xx, because a rejected shared token is an operator problem,
+// not something to render on the player's error screen.
 router.get("/", (req, res) => {
   const playUri = req.query.playUri;
   if (typeof playUri !== "string") {
-    res.status(400).json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing playUri"));
+    res.json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing playUri"));
     return;
   }
 
@@ -20,7 +26,7 @@ router.get("/", (req, res) => {
   try {
     roomUrl = new URL(playUri);
   } catch {
-    res.status(400).json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Malformed playUri: " + playUri));
+    res.json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Malformed playUri: " + playUri));
     return;
   }
 

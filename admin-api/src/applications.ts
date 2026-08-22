@@ -146,6 +146,7 @@ const APPLICATIONS: { enabled: boolean; application: ApplicationDefinitionInterf
     },
 ];
 
+/** The applications enabled by the current environment, in `LocalAdmin`'s order. */
 export function getApplications(): ApplicationDefinitionInterface[] {
     return APPLICATIONS.filter((entry) => entry.enabled).map((entry) => entry.application);
 }

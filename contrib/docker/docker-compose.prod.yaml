@@ -355,7 +355,10 @@ services:
 #      - ENABLE_MAP_EDITOR
 #      - MAP_EDITOR_ALLOWED_USERS
 #      - MAP_EDITOR_ALLOW_ALL_USERS
-#      - OPID_WOKA_NAME_POLICY=${OPENID_WOKA_NAME_POLICY:-user_input}
+#      # Forward both spellings verbatim; admin-api prefers OPENID_ over OPID_ and
+#      # falls back to user_input, exactly like play does.
+#      - OPENID_WOKA_NAME_POLICY
+#      - OPID_WOKA_NAME_POLICY
 #      # The admin API owns the "Applications" menu once ADMIN_API_URL is set,
 #      # so it must see the same flags as play.
 #      - KLAXOON_ENABLED=${KLAXOON_ENABLED}

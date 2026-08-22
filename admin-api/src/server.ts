@@ -40,9 +40,13 @@ app.use((req, res) => {
   res.status(404).json(buildErrorPayload("NOT_FOUND", "Not Found", "Path not found"));
 });
 
+// The details string is rendered on the user's error screen, so it must stay generic:
+// `String(err)` would leak SQLite paths and other internals to every visitor.
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error("Express error:", err);
-    res.status(500).json(buildErrorPayload("INTERNAL_ERROR", "Internal Server Error", String(err)));
+    res.status(500).json(
+        buildErrorPayload("INTERNAL_ERROR", "Internal Server Error", "An unexpected error occurred. Check the admin API logs."),
+    );
 });
 
 loadCatalog();

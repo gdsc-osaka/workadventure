@@ -27,17 +27,22 @@ HTTP ポートを listen しません**。つまり:
 
 `.env` で以下を設定します。
 
-```
+```dotenv
 ADMIN_API_URL=http://admin-api:3000
 ADMIN_API_TOKEN=<pusher と共有する秘密トークン>
 ```
 
 開発用 `docker-compose.yaml` には `admin-api` サービスを追加済みです。
+**このサービスはホストにポートを公開せず、Traefik も無効（`traefik.enable=false`）**にしてあります
+（理由は後述の「セキュリティモデル」）。そのため疎通確認は Compose ネットワークの内側から行います。
 
 ```bash
 docker compose up -d admin-api
-curl -s http://localhost:3000/api/capabilities   # 200 が返ることを確認してから play を起動
+docker compose logs admin-api          # "Admin API listening on port 3000" を待つ
+docker compose exec admin-api node -e "fetch('http://localhost:3000/api/capabilities').then(r=>console.log(r.status))"
 ```
+
+`200` を確認してから `play` を起動してください。
 
 本番向けイメージは**リポジトリルート**をビルドコンテキストにしてください（npm workspaces 全体が必要です）。
 
@@ -84,6 +89,31 @@ docker build -f admin-api/Dockerfile -t workadventure-admin-api .
 `ADMIN_API_URL` を有効化すると、マップエディタやチャットの設定も **この API の env が権威**になります
 （pusher 側の同名 env は使われません）。`play` 側と食い違わないように揃えてください。
 
+## セキュリティモデル
+
+この Admin API は **pusher からのみ呼ばれる内部サービス**で、認証は `ADMIN_API_TOKEN` の
+共有シークレット 1 本です。これは本家の Admin API 契約そのままで、
+「OIDC トークンを検証してユーザーを確定する」のは pusher 側の役割です。
+
+- `userIdentifier` は **pusher が検証済み JWT から取り出して渡す値を信頼**します。この API は
+  OIDC の issuer も JWKS も知らないため独自検証はできません（`accessToken` クエリは IdP の
+  アクセストークンで、多くの IdP では不透明トークンです）。
+- したがって **`ADMIN_API_TOKEN` を知っている相手は任意ユーザーのプロフィールを読み書きできます**。
+  `/api/save-*` が `userIdentifier` をボディで受け取るのも本家仕様どおりです。
+- 対策はトークン管理と到達性の制限です。**`ADMIN_API_TOKEN` は十分に長いランダム値にし、
+  この API を外部公開しないでください。** 同梱の compose はどちらもホストポートを公開せず、
+  開発用は `traefik.enable=false`、`contrib/docker/docker-compose.prod.yaml` の Traefik は
+  `--providers.docker.exposedbydefault=false` なので、既定では Compose ネットワーク内からのみ到達できます。
+
+トークン比較は `crypto.timingSafeEqual` を使っています。
+
+## ログに残る情報
+
+リクエストログには `userIdentifier`（OIDC の `sub`、プロバイダによってはメールアドレス）が
+1 行ずつ出ます。同期の不具合を追跡するために意図的に残していますが、制御文字は除去し
+（ログ偽装＝CWE-117 対策）128 文字で打ち切っています。共有のログ基盤へ転送する構成では
+個人情報の扱いに注意してください。不要なら `src/logger.ts` の `userPart` を削除すれば止まります。
+
 ## `LocalAdmin` との差分（既知の制限）
 
 `ADMIN_API_URL` を設定すると `LocalAdmin` は完全にバイパスされるため、この API が返さない値は
@@ -115,6 +145,15 @@ docker build -f admin-api/Dockerfile -t workadventure-admin-api .
 
 `/api/login-url/{token}`、`/api/ban`、`/api/room/tags`、`/api/members`、`/oauth/logout`、`/api/ice-servers`
 は未実装で 404 を返します。対応する機能を使わない限り通常運用に影響はありません。
+
+### エラー応答のステータスコードについて
+
+`/api/map` と `/api/room/access` は、アプリケーションエラー（`playUri` 不正など）も
+**HTTP 200 + エラーペイロード**で返します。pusher は axios で呼んでおり、非 2xx は
+ボディを読む前に例外になるため（`AdminApi.fetchMapDetails` / `fetchMemberDataByUuid`）、
+4xx を返すとユーザーには理由の消えた `ROOM_ACCESS_ERROR` しか表示されません。
+認証失敗だけは 403 を返します（運用者の設定ミスであり、プレイヤーのエラー画面に出す情報ではないため）。
+`/api/save-*` は成功時 **204**、リクエスト不正時 400 です（pusher は 204 以外を一律例外にします）。
 
 ## 同期のルール
 

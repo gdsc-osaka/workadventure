@@ -27,6 +27,9 @@ function asStringArray(value: unknown): string[] {
   return [];
 }
 
+// Like /api/map, application errors go out with HTTP 200: `isFetchMemberDataByUuidResponse`
+// is a union of the success payload and ErrorApiData, but axios rejects a non-2xx response
+// before pusher ever parses it, turning every 4xx into a generic "Connection error".
 router.get("/", (req, res) => {
   const userIdentifier = asString(req.query.userIdentifier);
   const playUri = asString(req.query.playUri);
@@ -35,11 +38,11 @@ router.get("/", (req, res) => {
   const chatID = asString(req.query.chatID);
 
   if (playUri === undefined) {
-    res.status(400).json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing playUri"));
+    res.json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing playUri"));
     return;
   }
   if (userIdentifier === undefined) {
-    res.status(400).json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing userIdentifier"));
+    res.json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Missing userIdentifier"));
     return;
   }
 
@@ -47,7 +50,7 @@ router.get("/", (req, res) => {
   try {
     playUrlPathname = new URL(playUri).pathname;
   } catch {
-    res.status(400).json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Malformed playUri: " + playUri));
+    res.json(buildErrorPayload("BAD_REQUEST", "Bad Request", "Malformed playUri: " + playUri));
     return;
   }
 

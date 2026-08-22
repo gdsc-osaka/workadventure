@@ -12,6 +12,11 @@ let cachedCompanionList: z.infer<typeof CompanionTextureCollection>[];
 let rawWokaList: unknown;
 let rawCompanionList: unknown;
 
+/**
+ * Reads `woka.json` / `companions.json` once at boot. Throws if either file is missing or
+ * invalid, so a misconfigured `WOKA_DATA_DIR` fails immediately instead of serving an
+ * empty catalog that would send every user back to the Woka picker.
+ */
 export function loadCatalog() {
   const wokaPath = path.join(WOKA_DATA_DIR, "woka.json");
   const companionsPath = path.join(WOKA_DATA_DIR, "companions.json");
@@ -27,16 +32,25 @@ export function loadCatalog() {
   cachedCompanionList = z.array(CompanionTextureCollection).parse(rawCompanionList);
 }
 
+/** The raw `woka.json` contents, served verbatim by `GET /api/woka/list`. */
 export function getWokaList(): unknown {
   return rawWokaList;
 }
 
+/** The raw `companions.json` contents, served verbatim by `GET /api/companion/list`. */
 export function getCompanionList(): unknown {
   return rawCompanionList;
 }
 
 const wokaPartNames = ["woka", "body", "eyes", "hair", "clothes", "hat", "accessory"];
 
+/**
+ * Resolves texture ids to `{id, url}` pairs, mirroring the upstream algorithm in
+ * `play`'s WokaService. Returns `undefined` when any id is unknown - including the case
+ * where the same id is passed twice, because the ids are de-duplicated into a Map and the
+ * size check then fails. That matches upstream, and pusher reads `undefined` as
+ * "textures are not valid", which sends the user to the Woka picker.
+ */
 export function resolveWoka(ids: string[]): WokaDetail[] | undefined {
   const textures = new Map<string, string>();
   const searchIds = new Set(ids);
@@ -75,6 +89,7 @@ export function resolveWoka(ids: string[]): WokaDetail[] | undefined {
   return details;
 }
 
+/** Resolves a companion id to `{id, url}`, or `undefined` when it is not in the catalog. */
 export function resolveCompanion(id: string): CompanionDetail | undefined {
   for (const collection of cachedCompanionList) {
     const texture = collection.textures.find((texture) => texture.id === id);
