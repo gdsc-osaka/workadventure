@@ -43,6 +43,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # checkout writes the job token into .git/config by default, and the build
+          # context is the repository root, which .dockerignore does not exclude .git from.
+          # A pull request controls the Dockerfile, so it could COPY .git and read the
+          # token during RUN. Nothing here needs git after checkout.
+          persist-credentials: false
 
       # arm64 matters: a self-hosted deployment on an Ampere/Graviton box needs it, and an
       # amd64-only image fails there with "exec format error". The image is small and has no
