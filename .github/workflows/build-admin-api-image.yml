@@ -6,17 +6,14 @@ name: Build and push Admin API image
 # neither of which a fork can satisfy — this one publishes to the current repository's GHCR.
 #
 # Pull requests build the image without pushing, so a broken Dockerfile is caught in review.
+#
+# No `paths:` filter on push: the deployment pulls this image, so it must exist for every
+# master commit and every version tag, not only the ones that happen to touch admin-api/.
 
 on:
   push:
     branches: [master]
-    paths:
-      - "admin-api/**"
-      - "libs/messages/src/JsonMessages/**"
-      - "play/src/pusher/data/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/build-admin-api-image.yml"
+    tags: ["v*"]
   release:
     types: [created]
   pull_request:
@@ -46,6 +43,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      # arm64 matters: a self-hosted deployment on an Ampere/Graviton box needs it, and an
+      # amd64-only image fails there with "exec format error". The image is small and has no
+      # native build step, so emulating the arm64 leg is cheaper than a second runner plus a
+      # manifest merge. Pull requests build amd64 only, to keep review feedback quick.
+      - name: Set up QEMU
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -78,6 +83,7 @@ jobs:
         with:
           context: ./
           file: admin-api/Dockerfile
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -90,9 +96,9 @@ jobs:
             echo "### Admin API image"
             echo
             if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "Built without pushing (pull request)."
+              echo "Built amd64 without pushing (pull request)."
             else
-              echo "Pushed the following tags:"
+              echo "Pushed \`linux/amd64, linux/arm64\` for:"
               echo '```'
               echo "${{ steps.meta.outputs.tags }}"
               echo '```'
