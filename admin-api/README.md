@@ -32,12 +32,17 @@ ADMIN_API_URL=http://admin-api:3000
 ADMIN_API_TOKEN=<pusher と共有する秘密トークン>
 ```
 
-開発用 `docker-compose.yaml` には `admin-api` サービスを追加済みです。
+開発用 `docker-compose.yaml` には `admin-api` サービスを追加済みですが、
+**compose profile `admin-api` を有効にした時だけ起動します**（既定では起動しません。
+E2E ジョブがこの compose ファイルでスタックを立ち上げるため、既定で動くと
+テストランナー上で不要な `npm install` が走ってしまいます）。
+`.env` に `COMPOSE_PROFILES=admin-api` を書くか、コマンドごとに渡してください。
+
 **このサービスはホストにポートを公開せず、Traefik も無効（`traefik.enable=false`）**にしてあります
 （理由は後述の「セキュリティモデル」）。そのため疎通確認は Compose ネットワークの内側から行います。
 
 ```bash
-docker compose up -d admin-api
+COMPOSE_PROFILES=admin-api docker compose up -d admin-api
 docker compose logs admin-api          # "Admin API listening on port 3000" を待つ
 docker compose exec admin-api node -e "fetch('http://localhost:3000/api/capabilities').then(r=>console.log(r.status))"
 ```

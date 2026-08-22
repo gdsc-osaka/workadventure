@@ -321,8 +321,16 @@ services:
       - "traefik.http.routers.map-storage-ui.service=map-storage-ui"
       - "traefik.http.services.map-storage-ui.loadbalancer.server.port=8080"
 
+  # Opt-in: `COMPOSE_PROFILES=admin-api docker compose up`, or set it in your .env.
+  #
+  # It must not start by default. The end-to-end job brings the stack up with this very
+  # file (`docker compose -f docker-compose.yaml -f docker-compose.e2e.yml ...`) but uses
+  # prebuilt images for everything else, so this dev container would be the only one
+  # running npm-install.sh — a full monorepo `npm install` on each of the 15 test runners,
+  # competing with the browsers for the whole run.
   admin-api:
     image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
+    profiles: ["admin-api"]
     command: npm run dev
     working_dir: /usr/src/app/admin-api
     volumes:
