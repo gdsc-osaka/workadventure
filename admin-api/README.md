@@ -59,7 +59,7 @@ docker build -f admin-api/Dockerfile -t workadventure-admin-api .
 | `ENABLE_MAP_EDITOR` | `false` | マップエディタの可否（`canEdit`） |
 | `MAP_EDITOR_ALLOW_ALL_USERS` | `true` | 全ユーザーにマップ編集を許可するか |
 | `MAP_EDITOR_ALLOWED_USERS` | `""` | 許可するユーザー識別子のカンマ区切りリスト |
-| `OPID_WOKA_NAME_POLICY` | `user_input` | `user_input` / `force_opid_name` など。不正値は `null` として返す |
+| `OPENID_WOKA_NAME_POLICY` / `OPID_WOKA_NAME_POLICY` | `user_input` | `user_input` / `allow_override_opid` / `force_opid` / `""`。不正値は `null` として返す。play と同じく `OPENID_` を優先 |
 | `ENABLE_CHAT` | `true` | |
 | `ENABLE_CHAT_UPLOAD` | `true` | |
 | `ENABLE_CHAT_ONLINE_LIST` | `true` | |

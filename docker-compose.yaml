@@ -336,6 +336,10 @@ services:
       START_ROOM_URL: "$START_ROOM_URL"
       DISABLE_ANONYMOUS: "$DISABLE_ANONYMOUS"
       ENABLE_MAP_EDITOR: "$ENABLE_MAP_EDITOR"
+      # Mirror the play service above, otherwise the two disagree on map-editor rights.
+      MAP_EDITOR_ALLOW_ALL_USERS: "false"
+      MAP_EDITOR_ALLOWED_USERS: "$MAP_EDITOR_ALLOWED_USERS"
+      OPENID_WOKA_NAME_POLICY: "${OPENID_WOKA_NAME_POLICY:-}"
       OPID_WOKA_NAME_POLICY: "${OPID_WOKA_NAME_POLICY:-user_input}"
     labels:
       - "traefik.enable=false"

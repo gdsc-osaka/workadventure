@@ -29,7 +29,10 @@ const envSchema = z.object({
   ENABLE_MAP_EDITOR: z.preprocess(preprocessBool, z.boolean().default(false)),
   MAP_EDITOR_ALLOW_ALL_USERS: z.preprocess(preprocessBool, z.boolean().default(true)),
   MAP_EDITOR_ALLOWED_USERS: z.string().default(""),
-  OPID_WOKA_NAME_POLICY: z.string().default("user_input"),
+  // play reads OPENID_WOKA_NAME_POLICY first and falls back to OPID_WOKA_NAME_POLICY;
+  // mirror that so the two cannot silently disagree.
+  OPENID_WOKA_NAME_POLICY: z.string().optional(),
+  OPID_WOKA_NAME_POLICY: z.string().optional(),
   ENABLE_CHAT: z.preprocess(preprocessBool, z.boolean().default(true)),
   ENABLE_CHAT_UPLOAD: z.preprocess(preprocessBool, z.boolean().default(true)),
   ENABLE_CHAT_ONLINE_LIST: z.preprocess(preprocessBool, z.boolean().default(true)),
@@ -52,7 +55,9 @@ export const ENABLE_MAP_EDITOR = env.ENABLE_MAP_EDITOR;
 export const MAP_EDITOR_ALLOW_ALL_USERS = env.MAP_EDITOR_ALLOW_ALL_USERS;
 export const MAP_EDITOR_ALLOWED_USERS = env.MAP_EDITOR_ALLOWED_USERS;
 
-const opidPolicyCheck = OpidWokaNamePolicy.safeParse(env.OPID_WOKA_NAME_POLICY);
+const opidPolicyCheck = OpidWokaNamePolicy.safeParse(
+  env.OPENID_WOKA_NAME_POLICY || env.OPID_WOKA_NAME_POLICY || "user_input",
+);
 export const OPID_WOKA_NAME_POLICY = opidPolicyCheck.success ? opidPolicyCheck.data : null;
 
 export const ENABLE_CHAT = env.ENABLE_CHAT;
