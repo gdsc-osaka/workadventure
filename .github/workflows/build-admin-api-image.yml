@@ -1,0 +1,112 @@
+name: Build and push Admin API image
+
+# The self-hosted Admin API is not part of upstream's release pipeline, so it gets its own
+# workflow instead of joining build-test-and-deploy.yml. That workflow also pushes to Docker
+# Hub under `thecodingmachine/*` and gates every push on `repository_owner == 'workadventure'`,
+# neither of which a fork can satisfy — this one publishes to the current repository's GHCR.
+#
+# Pull requests build the image without pushing, so a broken Dockerfile is caught in review.
+#
+# No `paths:` filter on push: the deployment pulls this image, so it must exist for every
+# master commit and every version tag, not only the ones that happen to touch admin-api/.
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  release:
+    types: [created]
+  pull_request:
+    paths:
+      - "admin-api/**"
+      - "libs/messages/src/JsonMessages/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/build-admin-api-image.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/workadventure-admin-api
+
+jobs:
+  build-admin-api-image:
+    name: "Build Admin API image"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # checkout writes the job token into .git/config by default, and the build
+          # context is the repository root, which .dockerignore does not exclude .git from.
+          # A pull request controls the Dockerfile, so it could COPY .git and read the
+          # token during RUN. Nothing here needs git after checkout.
+          persist-credentials: false
+
+      # arm64 matters: a self-hosted deployment on an Ampere/Graviton box needs it, and an
+      # amd64-only image fails there with "exec format error". The image is small and has no
+      # native build step, so emulating the arm64 leg is cheaper than a second runner plus a
+      # manifest merge. Pull requests build amd64 only, to keep review feedback quick.
+      - name: Set up QEMU
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # A pull request from a fork gets a read-only GITHUB_TOKEN, so it must not try to log in.
+      - name: Login to GHCR
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          # `latest` only moves on a release, so a deployment pinned to it never picks up
+          # an untagged master build by accident.
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=sha,format=long
+            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./
+          file: admin-api/Dockerfile
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          {
+            echo "### Admin API image"
+            echo
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "Built amd64 without pushing (pull request)."
+            else
+              echo "Pushed \`linux/amd64, linux/arm64\` for:"
+              echo '```'
+              echo "${{ steps.meta.outputs.tags }}"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -326,6 +326,65 @@ services:
       traefik.http.routers.map-storage-ssl.tls.certresolver: "myresolver"
     restart: ${RESTART_POLICY}
 
+
+# Self-hosted Admin API — persists each logged-in user's Woka, display name and
+# companion server-side so they follow the user across devices.
+# See admin-api/README.md. Requires OIDC login to be configured.
+#
+# Upstream publishes no image for it. Either build it from the repository root:
+#   docker build -f admin-api/Dockerfile -t workadventure-admin-api .
+# or use the image your fork's build-admin-api-image.yml workflow pushes to
+# ghcr.io/<owner>/workadventure-admin-api. Build it from the same source version as
+# the `play` image you deploy: the two share the @workadventure/messages contracts.
+#
+# Then uncomment the service below, add `admin-api-data` to the `volumes:`
+# section, and set in your .env:
+#   ADMIN_API_URL=http://admin-api:3000
+#   ADMIN_API_TOKEN=<a long random secret>
+#
+# IMPORTANT: `play` retries GET /api/capabilities forever at startup and does not
+# listen until it succeeds, so admin-api must be up first. The image ships a
+# healthcheck on that endpoint, so add this to the `play` service:
+#   depends_on:
+#     admin-api:
+#       condition: service_healthy
+#
+# Back up the `admin-api-data` volume alongside the others: it holds every user's
+# Woka, display name and companion, and nothing else stores them.
+#
+#  admin-api:
+#    image: workadventure-admin-api
+#    environment:
+#      - ADMIN_API_TOKEN
+#      - ADMIN_API_PORT=3000
+#      - ADMIN_API_DB_PATH=/data/profiles.sqlite
+#      - PUBLIC_MAP_STORAGE_URL=https://${DOMAIN}/map-storage
+#      - START_ROOM_URL
+#      - DISABLE_ANONYMOUS
+#      - ENABLE_MAP_EDITOR
+#      - MAP_EDITOR_ALLOWED_USERS
+#      - MAP_EDITOR_ALLOW_ALL_USERS
+#      # Forward both spellings verbatim; admin-api prefers OPENID_ over OPID_ and
+#      # falls back to user_input, exactly like play does.
+#      - OPENID_WOKA_NAME_POLICY
+#      - OPID_WOKA_NAME_POLICY
+#      # The admin API owns the "Applications" menu once ADMIN_API_URL is set,
+#      # so it must see the same flags as play.
+#      - KLAXOON_ENABLED=${KLAXOON_ENABLED}
+#      - YOUTUBE_ENABLED=${YOUTUBE_ENABLED}
+#      - GOOGLE_DRIVE_ENABLED=${GOOGLE_DRIVE_ENABLED}
+#      - GOOGLE_DOCS_ENABLED=${GOOGLE_DOCS_ENABLED}
+#      - GOOGLE_SHEETS_ENABLED=${GOOGLE_SHEETS_ENABLED}
+#      - GOOGLE_SLIDES_ENABLED=${GOOGLE_SLIDES_ENABLED}
+#      - ERASER_ENABLED=${ERASER_ENABLED}
+#      - EXCALIDRAW_ENABLED=${EXCALIDRAW_ENABLED}
+#      - CARDS_ENABLED=${CARDS_ENABLED}
+#      - TLDRAW_ENABLED=${TLDRAW_ENABLED}
+#    volumes:
+#      - admin-api-data:/data
+#    restart: ${RESTART_POLICY}
+
 volumes:
   redisdata:
   map-storage-data:
+#  admin-api-data:
