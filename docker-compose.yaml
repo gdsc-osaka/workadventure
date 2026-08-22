@@ -321,6 +321,25 @@ services:
       - "traefik.http.routers.map-storage-ui.service=map-storage-ui"
       - "traefik.http.services.map-storage-ui.loadbalancer.server.port=8080"
 
+  admin-api:
+    image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
+    command: npm run dev
+    working_dir: /usr/src/app/admin-api
+    volumes:
+      - .:/usr/src/app
+    environment:
+      STARTUP_COMMAND_1: ../npm-install.sh
+      ADMIN_API_TOKEN: "$ADMIN_API_TOKEN"
+      ADMIN_API_PORT: "3000"
+      ADMIN_API_DB_PATH: "/usr/src/app/admin-api/data/profiles.sqlite"
+      PUBLIC_MAP_STORAGE_URL: "http://map-storage.workadventure.localhost"
+      START_ROOM_URL: "$START_ROOM_URL"
+      DISABLE_ANONYMOUS: "$DISABLE_ANONYMOUS"
+      ENABLE_MAP_EDITOR: "$ENABLE_MAP_EDITOR"
+      OPID_WOKA_NAME_POLICY: "${OPID_WOKA_NAME_POLICY:-user_input}"
+    labels:
+      - "traefik.enable=false"
+
   uploader:
     image: ghcr.io/thecodingmachine/nodejs:v2-24-trixie
     command: npm run dev
