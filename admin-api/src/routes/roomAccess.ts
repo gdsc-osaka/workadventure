@@ -2,6 +2,7 @@ import { Router } from "express";
 import { repo } from "../store/ProfileRepository.js";
 import { resolveWoka, resolveCompanion } from "../catalog.js";
 import { ENABLE_MAP_EDITOR, MAP_EDITOR_ALLOW_ALL_USERS, MAP_EDITOR_ALLOWED_USERS, WORLD_NAME } from "../env.js";
+import { getApplications } from "../applications.js";
 import { buildErrorPayload } from "../errors.js";
 
 const router = Router();
@@ -110,7 +111,7 @@ router.get("/", (req, res) => {
     activatedInviteUser: true,
     canEdit,
     world: WORLD_NAME,
-    applications: [],
+    applications: getApplications(),
     canRecord: false,
   };
 

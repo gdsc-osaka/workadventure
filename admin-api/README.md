@@ -67,9 +67,38 @@ docker build -f admin-api/Dockerfile -t workadventure-admin-api .
 | `ENABLE_SAY` | `true` | |
 | `ENABLE_TUTORIAL` | `true` | |
 | `WORLD_NAME` | `selfHostedWorld` | `/api/room/access` が返す `world` |
+| `KLAXOON_ENABLED` | `false` | 以下はアプリメニューの内容。play と同じ変数名なので同じ `.env` で駆動できる |
+| `YOUTUBE_ENABLED` | `true` | |
+| `GOOGLE_DRIVE_ENABLED` | `true` | |
+| `GOOGLE_DOCS_ENABLED` | `true` | |
+| `GOOGLE_SHEETS_ENABLED` | `true` | |
+| `GOOGLE_SLIDES_ENABLED` | `true` | |
+| `ERASER_ENABLED` | `true` | |
+| `EXCALIDRAW_ENABLED` | `true` | |
+| `CARDS_ENABLED` | `true` | |
+| `TLDRAW_ENABLED` | `true` | |
+
+真偽値は `true` / `1` / `false` / `0` を受け付けます。**空文字はデフォルト値として扱います**
+（`.env.template` は `DISABLE_ANONYMOUS=` のように空で配っており、docker compose は未設定変数を空文字で渡すため）。
 
 `ADMIN_API_URL` を有効化すると、マップエディタやチャットの設定も **この API の env が権威**になります
 （pusher 側の同名 env は使われません）。`play` 側と食い違わないように揃えてください。
+
+## `LocalAdmin` との差分（既知の制限）
+
+`ADMIN_API_URL` を設定すると `LocalAdmin` は完全にバイパスされるため、この API が返さない値は
+`play` 側の env をいくら設定しても反映されません。現時点で意図的に返していないものは以下です。
+
+- **タグ**: `tags` は常に `[]` を返します。`OPENID_TAGS_CLAIM` によるタグ（マップ編集権限やタグ制限エリア）は
+  効かなくなります。必要になったら `/api/room/access` でユーザー識別子からタグを解決してください。
+- **録画**: `canRecord` は常に `false`、`/api/map` も `recording` を返しません（＝ボタン非表示）。
+  `LIVEKIT_RECORDING_S3_*` を設定していても有効になりません。
+- **メタタグ / 既定 Woka**: `metatags`、`defaultWokaName`、`defaultWokaTexture`、`skipCameraPage`、
+  `bypassPwa`、`provideDefaultWoka*` は返さないので、フロント側の既定値になります。
+- `enableIssueReport` と `enableMatrixChat` は返しませんが、フロントが未指定を `true` として扱うため
+  （`Room.ts` の `?? true`）挙動は変わりません。
+
+アプリメニュー（`applications`）は `LocalAdmin` と同じ env から組み立てて返しています。
 
 ## 実装しているエンドポイント
 
