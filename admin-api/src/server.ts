@@ -20,8 +20,8 @@ app.set("query parser", "extended");
 app.use(express.json());
 
 app.use((req, res, next) => {
-  logRequest(req);
-  next();
+    logRequest(req);
+    next();
 });
 
 app.use("/api/capabilities", capabilitiesRoute);
@@ -37,7 +37,7 @@ app.use("/api/woka/list", wokaListRoute);
 app.use("/api/companion/list", companionListRoute);
 
 app.use((req, res) => {
-  res.status(404).json(buildErrorPayload("NOT_FOUND", "Not Found", "Path not found"));
+    res.status(404).json(buildErrorPayload("NOT_FOUND", "Not Found", "Path not found"));
 });
 
 // The details string is rendered on the user's error screen, so it must stay generic:
@@ -45,12 +45,16 @@ app.use((req, res) => {
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error("Express error:", err);
     res.status(500).json(
-        buildErrorPayload("INTERNAL_ERROR", "Internal Server Error", "An unexpected error occurred. Check the admin API logs."),
+        buildErrorPayload(
+            "INTERNAL_ERROR",
+            "Internal Server Error",
+            "An unexpected error occurred. Check the admin API logs.",
+        ),
     );
 });
 
 loadCatalog();
 
 app.listen(ADMIN_API_PORT, () => {
-  console.info(`Admin API listening on port ${ADMIN_API_PORT}`);
+    console.info(`Admin API listening on port ${ADMIN_API_PORT}`);
 });

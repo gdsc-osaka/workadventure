@@ -44,7 +44,20 @@ docker compose exec admin-api node -e "fetch('http://localhost:3000/api/capabili
 
 `200` を確認してから `play` を起動してください。
 
-本番向けイメージは**リポジトリルート**をビルドコンテキストにしてください（npm workspaces 全体が必要です）。
+## イメージ
+
+`master` への push とリリース作成時に、`.github/workflows/build-admin-api-image.yml` が
+`ghcr.io/<リポジトリオーナー>/workadventure-admin-api` へ publish します。タグは
+ブランチ名 / タグ名 / コミット SHA で、`latest` はリリース時のみ更新されます
+（`master` の途中のビルドを本番が誤って拾わないため）。Pull Request では push せずビルドのみ行い、
+Dockerfile の破損をレビュー時に検出します。
+
+**デプロイ中の `play` と同じバージョンのソースからビルドしてください。** この API は
+`@workadventure/messages` の zod スキーマに直接依存しており、`play` との契約はそのスキーマで決まります。
+
+手元でビルドする場合は**リポジトリルート**をビルドコンテキストにしてください（npm workspaces のレイアウトが必要です）。
+`admin-api` と `libs/messages`、Woka カタログである `play/src/pusher/data` だけを取り込むので、
+`play` の依存ツリーはイメージに入りません。
 
 ```bash
 docker build -f admin-api/Dockerfile -t workadventure-admin-api .
@@ -188,6 +201,15 @@ Node 24 標準の `node:sqlite` を使うのでネイティブビルドは不要
 
 ```bash
 cd admin-api
-npm run dev        # tsx watch
-npm run typecheck  # tsc --noEmit
+npm run dev           # tsx watch
+npm run typecheck     # tsc --noEmit
+npm run lint          # eslint (@workadventure/eslint-config)
+npm run pretty-check  # prettier --check
 ```
+
+この 3 つのゲートは `continuous_integration.yml` の "Continuous Integration Admin API" ジョブでも走ります。
+他のワークスペースと違い protoc / ts-proto のステップは不要です
+（`libs/messages` の手書き zod スキーマだけを import し、生成された protobuf コードは使っていないため）。
+
+イメージにはヘルスチェックが入っており、`/api/capabilities` が 200 を返すと healthy になります。
+`play` の `depends_on` に `condition: service_healthy` を指定すれば、起動順序の問題を避けられます。

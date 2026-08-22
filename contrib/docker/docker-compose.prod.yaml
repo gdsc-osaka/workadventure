@@ -332,8 +332,11 @@ services:
 # companion server-side so they follow the user across devices.
 # See admin-api/README.md. Requires OIDC login to be configured.
 #
-# There is no published image for it; build it from the repository root first:
+# Upstream publishes no image for it. Either build it from the repository root:
 #   docker build -f admin-api/Dockerfile -t workadventure-admin-api .
+# or use the image your fork's build-admin-api-image.yml workflow pushes to
+# ghcr.io/<owner>/workadventure-admin-api. Build it from the same source version as
+# the `play` image you deploy: the two share the @workadventure/messages contracts.
 #
 # Then uncomment the service below, add `admin-api-data` to the `volumes:`
 # section, and set in your .env:
@@ -341,7 +344,14 @@ services:
 #   ADMIN_API_TOKEN=<a long random secret>
 #
 # IMPORTANT: `play` retries GET /api/capabilities forever at startup and does not
-# listen until it succeeds, so admin-api must be up first.
+# listen until it succeeds, so admin-api must be up first. The image ships a
+# healthcheck on that endpoint, so add this to the `play` service:
+#   depends_on:
+#     admin-api:
+#       condition: service_healthy
+#
+# Back up the `admin-api-data` volume alongside the others: it holds every user's
+# Woka, display name and companion, and nothing else stores them.
 #
 #  admin-api:
 #    image: workadventure-admin-api

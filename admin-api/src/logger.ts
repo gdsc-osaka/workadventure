@@ -26,13 +26,18 @@ function sanitizeForLog(value: string): string {
  * problem debuggable — see "ログに残る情報" in the README before shipping these logs
  * to a shared log aggregator.
  */
-export function logRequest(req: Request, ...args: unknown[]) {
-    let userIdentifier = "";
-    if (req.method === "POST" && req.body && typeof req.body.userIdentifier === "string") {
-        userIdentifier = req.body.userIdentifier;
-    } else if (req.query && typeof req.query.userIdentifier === "string") {
-        userIdentifier = req.query.userIdentifier;
+/** `req.body` is typed `any` by express, so narrow it through `unknown` before reading. */
+function readIdentifier(source: unknown): string | undefined {
+    if (typeof source !== "object" || source === null) {
+        return undefined;
     }
+    const value = (source as Record<string, unknown>).userIdentifier;
+    return typeof value === "string" ? value : undefined;
+}
+
+export function logRequest(req: Request, ...args: unknown[]) {
+    const userIdentifier =
+        (req.method === "POST" ? readIdentifier(req.body as unknown) : undefined) ?? readIdentifier(req.query) ?? "";
     const userPart = userIdentifier ? ` - user: ${sanitizeForLog(userIdentifier)}` : "";
     console.info(`[${new Date().toISOString()}] ${req.method} ${req.path}${userPart}`, ...args);
 }

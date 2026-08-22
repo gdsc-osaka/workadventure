@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
-import { ADMIN_API_DB_PATH } from "../env.js";
 import fs from "node:fs";
 import path from "node:path";
+import { ADMIN_API_DB_PATH } from "../env.js";
 
 fs.mkdirSync(path.dirname(ADMIN_API_DB_PATH), { recursive: true });
 

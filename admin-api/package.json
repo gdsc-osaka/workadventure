@@ -5,17 +5,24 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ --ext .ts",
+    "lint-fix": "eslint --fix src/ --ext .ts",
+    "pretty": "prettier --write \"src/**/*.ts\"",
+    "pretty-check": "prettier --check \"src/**/*.ts\""
   },
   "dependencies": {
     "@workadventure/messages": "1.0.0",
     "express": "^5.2.1",
+    "tsx": "^4.22.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^24.0.0",
-    "tsx": "^4.22.3",
+    "@workadventure/eslint-config": "1.0.0",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.3",
     "typescript": "^5.9.3"
   }
 }
